@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "async_mixin"
-version = "0.0.1"
+version = "0.0.3"
 description = "Boilerplate for an Asynchronous HTTP REST Client as a Mixin"
 authors = ["Andrew Rainboldt <arainboldt@protonmail.com>"]
 

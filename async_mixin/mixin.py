@@ -13,6 +13,9 @@ except:
     pass
 
 class AsyncHttpMixin:
+    headers = {
+            'Content-Type': 'application/json'
+    }
 
     @property
     def session(self):
@@ -134,6 +137,13 @@ class AsyncHttpMixin:
         #init connection
         self._async_conn(loop)
         res = None
+
+        if args is None:
+            args = []
+
+        if kwargs is None:
+            kwargs = {}
+
         try:
             if len(args):
                 if unpack:
