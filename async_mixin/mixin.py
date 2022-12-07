@@ -1,27 +1,29 @@
+import os
+import requests
 import asyncio
 import aiohttp
 import socket
 import json
 from typing import Dict, List, Callable
 from asyncio_throttle import Throttler
-
 #enable nested async calls for use in Jupyter notebooks
 try:
     import nest_asyncio
     nest_asyncio.apply(loop=asyncio.get_event_loop())
+    #print('Nest Asyncio Activated')
 except:
     pass
 
 class AsyncHttpMixin:
-    headers = {
-            'Content-Type': 'application/json'
-    }
 
     @property
     def session(self):
         if not hasattr(self, '_session'):
             self._session = aiohttp.ClientSession(headers=self.headers, json_serialize=json.dumps)
         return self._session
+
+    def reset(self):
+        del self._session
 
     def set_rate_limit(self, n: int = 5, p: int = 60):
         """
@@ -45,6 +47,23 @@ class AsyncHttpMixin:
                                          family=socket.AF_INET,
                                          verify_ssl=False,
                                          )
+
+    def get(self, url, headers):
+        try:
+            resp = requests.get(url, headers=headers)
+            resp.raise_for_status()
+        except requests.exceptions.HTTPError as err:
+            raise SystemExit(err)
+        return resp.json()
+
+    def post(self, url: str, data: dict=None):
+        try:
+            resp = requests.post(url, data=json.dumps(data), headers=self.headers)
+            resp.raise_for_status()
+        except requests.exceptions.HTTPError as err:
+            print(resp.json())
+            raise SystemExit(err)
+        return resp.json()
 
     async def async_get(self, url: str):
         """
@@ -133,17 +152,10 @@ class AsyncHttpMixin:
 
         """
         #get loop
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         #init connection
         self._async_conn(loop)
         res = None
-
-        if args is None:
-            args = []
-
-        if kwargs is None:
-            kwargs = {}
-
         try:
             if len(args):
                 if unpack:
@@ -162,4 +174,5 @@ class AsyncHttpMixin:
             traceback.print_exception(*exc_info)
         #be tidy, close loop
         loop.close()
+        self.reset()
         return res
