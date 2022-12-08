@@ -23,7 +23,10 @@ class AsyncHttpMixin:
         return self._session
 
     def reset(self):
-        del self._session
+        try:
+            del self._session
+        except:
+            pass
 
     def set_rate_limit(self, n: int = 5, p: int = 60):
         """
