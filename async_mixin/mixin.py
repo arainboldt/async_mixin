@@ -23,10 +23,8 @@ class AsyncHttpMixin:
         return self._session
 
     def reset(self):
-        try:
+        if hasattr(self, '_session'):
             del self._session
-        except:
-            pass
 
     def set_rate_limit(self, n: int = 5, p: int = 60):
         """
@@ -154,6 +152,10 @@ class AsyncHttpMixin:
         Returns: call response(s)
 
         """
+        if args is None:
+            args = []
+        if kwargs is None:
+            kwargs = {}
         #get loop
         loop = asyncio.new_event_loop()
         #init connection
