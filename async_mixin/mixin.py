@@ -40,14 +40,12 @@ class AsyncHttpMixin:
             del self._session
 
     def check_call_limit(self, resp):
-        if hasattr(self, 'call_count_key') and hasattr(self, 'call_count_limit_key'):
-            self.call_counts = int(resp.headers.get(self.call_count_key, 0))
+        if hasattr(self, 'call_count_limit_key'):
             self.call_count_limit = int(resp.headers.get(self.call_count_limit_key, 1))
         
         if hasattr(self, 'call_limit_remaining_key'):
             self.remaining_calls = int(resp.headers.get(self.call_limit_remaining_key, 1))
-        elif self.call_counts and self.call_count_limit:
-            self.remaining_calls = self.call_count_limit - self.call_counts
+
 
     def set_rate_limit(self, n: int = 5, p: int = 60):
         """
