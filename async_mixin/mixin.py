@@ -21,7 +21,7 @@ class AsyncHttpMixin:
     def call_limiter(func):
         @functools.wraps(func)
         def wrap(self, *args, **kwargs):
-            if self.remaining_calls > 0:
+            if (self.remaining_calls is not None) and (self.remaining_calls > 0):
                 return func(self, *args, **kwargs)
             else:
                 raise ValueError(f'No remaining calls for API')
@@ -69,7 +69,7 @@ class AsyncHttpMixin:
                                          family=socket.AF_INET,
                                          verify_ssl=False,
                                          )
-                                         
+
     @call_limiter
     def get(self, url, headers):
         try:
