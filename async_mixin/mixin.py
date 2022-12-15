@@ -4,6 +4,7 @@ import asyncio
 import aiohttp
 import socket
 import json
+import functools
 from typing import Dict, List, Callable
 from asyncio_throttle import Throttler
 #enable nested async calls for use in Jupyter notebooks
@@ -14,7 +15,17 @@ try:
 except:
     pass
 
+
 class AsyncHttpMixin:
+
+    def call_limiter(func):
+        @functools.wraps(func)
+        def wrap(self, *args, **kwargs):
+            if self.remaining_calls > 0:
+                return func(self, *args, **kwargs)
+            else:
+                raise ValueError(f'No remaining calls for API')
+        return wrap
 
     @property
     def session(self):
@@ -25,6 +36,16 @@ class AsyncHttpMixin:
     def reset(self):
         if hasattr(self, '_session'):
             del self._session
+
+    def check_call_limit(self, resp):
+        if hasattr(self, 'call_count_key') and hasattr(self, 'call_count_limit_key'):
+            self.call_counts = resp.headers.get(self.call_count_key, None)
+            self.call_count_limit = resp.headers.get(self.call_count_limit_key, None)
+        
+        if hasattr(self, 'call_limit_remaining_key'):
+            self.remaining_calls = resp.headers.get(self.call_limit_remaining_key, None)
+        elif self.call_counts and self.call_count_limit:
+            self.remaining_calls = self.call_count_limit - self.call_counts
 
     def set_rate_limit(self, n: int = 5, p: int = 60):
         """
@@ -48,15 +69,18 @@ class AsyncHttpMixin:
                                          family=socket.AF_INET,
                                          verify_ssl=False,
                                          )
-
+                                         
+    @call_limiter
     def get(self, url, headers):
         try:
             resp = requests.get(url, headers=headers)
             resp.raise_for_status()
         except requests.exceptions.HTTPError as err:
             raise SystemExit(err)
+        self.check_call_limit(resp)
         return resp.json()
 
+    @call_limiter
     def post(self, url: str, data: dict=None):
         try:
             resp = requests.post(url, data=json.dumps(data), headers=self.headers)
@@ -64,8 +88,10 @@ class AsyncHttpMixin:
         except requests.exceptions.HTTPError as err:
             print(resp.json())
             raise SystemExit(err)
+        self.check_call_limit(resp)
         return resp.json()
 
+    @call_limiter
     async def async_get(self, url: str):
         """
         throttled asynchronous get call
@@ -81,9 +107,11 @@ class AsyncHttpMixin:
                     assert response.status == 200
                 except:
                     return {'data': {}, 'message': {f"Error: {response.reason}"}, 'meta': {} }
+                self.check_call_limit(response)
                 data = await response.json()
                 return data
 
+    @call_limiter
     async def async_post(self, url: str, payload: Dict):
         """
         throttled asynchronous post call
@@ -101,6 +129,7 @@ class AsyncHttpMixin:
                 except Exception as e:
                     print(f'Post Error: {response.status}: {e}')
                     return {'data': {}, 'message': {f"Error: {response.reason}"}, 'meta': {}}
+                self.check_call_limit(response)
                 data = await response.json()
                 return data
 
