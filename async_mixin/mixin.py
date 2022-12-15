@@ -41,11 +41,11 @@ class AsyncHttpMixin:
 
     def check_call_limit(self, resp):
         if hasattr(self, 'call_count_key') and hasattr(self, 'call_count_limit_key'):
-            self.call_counts = resp.headers.get(self.call_count_key, None)
-            self.call_count_limit = resp.headers.get(self.call_count_limit_key, None)
+            self.call_counts = resp.headers.get(self.call_count_key, 0)
+            self.call_count_limit = resp.headers.get(self.call_count_limit_key, 0)
         
         if hasattr(self, 'call_limit_remaining_key'):
-            self.remaining_calls = resp.headers.get(self.call_limit_remaining_key, None)
+            self.remaining_calls = resp.headers.get(self.call_limit_remaining_key, 1)
         elif self.call_counts and self.call_count_limit:
             self.remaining_calls = self.call_count_limit - self.call_counts
 
